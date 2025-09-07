@@ -25,3 +25,6 @@ dist-ssr
 
 .config/
 !.env
+venv/
+backend/.env
+node_modules/
