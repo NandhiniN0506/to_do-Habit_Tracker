@@ -2,11 +2,13 @@ import Navbar from "@/components/layout/Navbar";
 import TaskForm from "@/components/todo/TaskForm";
 import TaskList from "@/components/todo/TaskList";
 import GamificationBar from "@/components/gamification/GamificationBar";
+import WelcomeOverlay from "@/components/onboarding/WelcomeOverlay";
 
 export default function Index() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-indigo-50">
       <Navbar />
+      <WelcomeOverlay />
       <main className="container py-8">
         <GamificationBar />
         <div className="mb-8">

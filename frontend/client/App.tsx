@@ -13,6 +13,7 @@ import Wellness from "./pages/Wellness";
 import About from "./pages/About";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/pomodoro" element={<ProtectedRoute><Pomodoro /></ProtectedRoute>} />
             <Route path="/wellness" element={<ProtectedRoute><Wellness /></ProtectedRoute>} />
             <Route path="/about" element={<About />} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

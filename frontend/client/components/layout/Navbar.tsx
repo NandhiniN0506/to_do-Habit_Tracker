@@ -1,12 +1,15 @@
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import ThemeToggle from "./ThemeToggle";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function Navbar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const token = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
   const email = typeof window !== "undefined" ? localStorage.getItem("user_email") : null;
-  const first = (email || "").trim().charAt(0).toUpperCase() || "U";
+  const name = typeof window !== "undefined" ? localStorage.getItem("user_name") : null;
+  const first = ((name && name.trim()[0]) || (email && email.trim()[0]) || "U").toUpperCase();
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur">
       <div className="container flex h-16 items-center justify-between">
@@ -71,15 +74,17 @@ export default function Navbar() {
           <div className="ml-2 flex items-center gap-2">
             <ThemeToggle />
             {token ? (
-              <>
-                <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary font-medium" title={email || undefined}>{first}</div>
-                <button
-                  className="text-sm text-foreground/80 hover:text-foreground"
-                  onClick={() => { localStorage.removeItem("jwt"); localStorage.removeItem("user_email"); window.location.assign("/login"); }}
-                >
-                  Logout
-                </button>
-              </>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-secondary font-medium" title={name || email || undefined} aria-label="Account menu">
+                    {first}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>Settings</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { localStorage.removeItem("jwt"); localStorage.removeItem("user_email"); localStorage.removeItem("user_name"); window.location.assign("/login"); }}>Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <Link to="/login" className="text-sm text-foreground/80 hover:text-foreground">Login</Link>
             )}

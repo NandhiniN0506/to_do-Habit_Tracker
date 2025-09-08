@@ -1,4 +1,3 @@
-// lib/todo-api.ts
 export type Priority = "Low" | "Medium" | "High";
 export type Status = "Pending" | "Completed";
 
@@ -15,12 +14,12 @@ export interface Task {
   created_at: string;
 }
 
-// ---------------- Base URL ----------------
 function getBaseUrl() {
-  return "https://to-do-habit-tracker.onrender.com"; // your live backend
+  const env = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (env && env.trim().length > 0) return env.replace(/\/$/, "");
+  return "";
 }
 
-// ---------------- HTTP helper ----------------
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   const base = getBaseUrl();
   const token = localStorage.getItem("jwt");
@@ -47,15 +46,16 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-// ---------------- Todo API ----------------
 export const TodoAPI = {
+  // Tasks
   getTasks: () => http<Task[]>("/tasks"),
   addTask: (body: Partial<Task> & { task: string }) =>
-    http<Task>("/tasks", { method: "POST", body: JSON.stringify(body) }),
+    http<any>("/tasks", { method: "POST", body: JSON.stringify(body) }),
   updateTask: (id: number, body: Partial<Task>) =>
-    http<Task>(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+    http<{ message?: string }>(`/tasks/${id}`, { method: "PUT", body: JSON.stringify(body) }),
   deleteTask: (id: number) => http<{ message?: string }>(`/tasks/${id}`, { method: "DELETE" }),
-  completeTask: (id: number) => TodoAPI.updateTask(id, { status: "Completed" }),
+  // Completion helper
+  completeTask: (id: number) => http<{ message?: string }>(`/tasks/${id}/complete`, { method: "POST", body: JSON.stringify({}) }),
 
   // Analytics
   completionRate: () => http<{ completion_rate: number }>("/analytics/completion_rate"),
@@ -85,10 +85,17 @@ export const TodoAPI = {
   },
 };
 
-// ---------------- Mindfulness API ----------------
 export type Quote = { quote: string; author?: string };
-
 export const MindAPI = {
   getQuote: () => http<Quote>("/wellness/quote"),
   getFunFact: () => http<any>("/wellness/fact"),
+};
+
+export const AuthAPI = {
+  me: () => http<any>("/me"),
+  updateMe: (body: { name?: string }) => http<any>("/me", { method: "PATCH", body: JSON.stringify(body) }),
+  changePassword: (body: { current_password: string; new_password: string; confirm_password: string }) =>
+    http<any>("/change-password", { method: "POST", body: JSON.stringify(body) }),
+  setPassword: (body: { new_password: string; confirm_password: string }) =>
+    http<any>("/set-password", { method: "POST", body: JSON.stringify(body) }),
 };

@@ -5,6 +5,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Cute avatar animations */
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-18deg); }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes cheer {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+.avatar svg { display: block; }
+.avatar-wave .arm-right { transform-origin: 140px 130px; animation: wave 1.2s ease-in-out infinite; }
+.avatar-think { animation: bob 2.2s ease-in-out infinite; }
+.avatar-think .arm-right { transform-origin: 160px 140px; transform: translate(-8px, -10px) rotate(-20deg); }
+.avatar-cheer .arm-left { transform: translate(0, -22px) rotate(-10deg); transform-origin: 60px 130px; animation: cheer 1.8s ease-in-out infinite; }
+.avatar-cheer .arm-right { transform: translate(0, -22px) rotate(10deg); transform-origin: 140px 130px; animation: cheer 1.8s ease-in-out infinite; }
+
 @layer base {
   /**
    * Tailwind CSS theme

@@ -18,7 +18,9 @@ function GoogleIcon() {
   );
 }
 
-type CredentialPayload = { idToken: string; profile?: { email?: string; name?: string; picture?: string } };
+type CredentialPayload = { idToken: string; profile?: {
+  gender: any; email?: string; name?: string; picture?: string 
+} };
 
 export default function GoogleButton({ label = "Continue with Google", onSuccess, mode = "auto", onCredential }: { label?: string; onSuccess?: () => void; mode?: "auto" | "defer"; onCredential?: (cred: CredentialPayload) => void }) {
   const divRef = useRef<HTMLDivElement>(null);
@@ -62,7 +64,7 @@ export default function GoogleButton({ label = "Continue with Google", onSuccess
           const id_token = response?.credential;
           if (!id_token) { setError("Google id_token missing"); return; }
           const claims = decodeJwt(id_token);
-          const profile = claims ? { email: claims.email, name: claims.name || claims.given_name || claims.family_name, picture: claims.picture } : undefined;
+          const profile = claims ? { gender: claims.gender, email: claims.email, name: claims.name || claims.given_name || claims.family_name, picture: claims.picture } : undefined;
 
           if (mode === "defer") {
             try { onCredential && onCredential({ idToken: id_token, profile }); } catch {}
@@ -70,12 +72,11 @@ export default function GoogleButton({ label = "Continue with Google", onSuccess
           }
 
           try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/google-login`, {
+            const res = await fetch(`https://to-do-habit-tracker.onrender.com/google-login`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ id_token }),
             });
-
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
               const msg = (data?.message || data?.error || `Request failed: ${res.status}`) as string;
@@ -90,6 +91,9 @@ export default function GoogleButton({ label = "Continue with Google", onSuccess
             }
             const token: string | undefined = data.token || data.access_token || data.jwt || data.id_token;
             if (token) localStorage.setItem("jwt", token);
+            if (data.user?.email) localStorage.setItem("user_email", data.user.email);
+            if (data.user?.name) localStorage.setItem("user_name", data.user.name);
+            try { sessionStorage.setItem("onboarding_mode", "returning"); } catch {}
             if (onSuccess) onSuccess();
             else window.location.assign("/");
           } catch (e: any) {

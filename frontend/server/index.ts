@@ -22,6 +22,9 @@ export function createServer() {
       path.startsWith("/register") ||
       path.startsWith("/signup") ||
       path.startsWith("/google-login") ||
+      path.startsWith("/change-password") ||
+      path.startsWith("/set-password") ||
+      path.startsWith("/me") ||
       path.startsWith("/wellness");
 
     app.use(async (req, res, next) => {
