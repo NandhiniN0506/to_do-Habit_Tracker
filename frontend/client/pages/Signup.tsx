@@ -8,7 +8,6 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import GoogleButton from "@/components/auth/GoogleButton";
 import AuthHeader from "@/components/layout/AuthHeader";
-import CompleteProfileDialog, { ProfileData } from "@/components/auth/CompleteProfileDialog";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
