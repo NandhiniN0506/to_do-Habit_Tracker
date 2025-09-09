@@ -12,9 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import GoogleButton from "@/components/auth/GoogleButton";
 import AuthHeader from "@/components/layout/AuthHeader";
-import CompleteProfileDialog, { ProfileData } from "@/components/auth/CompleteProfileDialog";
 
-// ------------------ SCHEMA ------------------
+// ------------------ VALIDATION SCHEMA ------------------
 const schema = z.object({
   name: z.string().min(1, "Name is required").regex(/^[A-Za-z ]+$/, "Only letters and spaces allowed"),
   email: z.string().email("Enter a valid email"),
@@ -45,45 +44,38 @@ export default function Signup() {
     resolver: zodResolver(schema),
   });
 
-  const [profileOpen, setProfileOpen] = useState(false);
   const [googleSubmitting, setGoogleSubmitting] = useState(false);
-  const [pendingGoogle, setPendingGoogle] = useState<{ idToken: string; email?: string } | null>(null);
 
-  // ----------- GOOGLE SIGNUP WITH PROFILE -----------
-  async function submitGoogleWithProfile(idToken: string, profile: ProfileData) {
+  // ----------- GOOGLE SIGNUP -----------
+  const handleGoogle = async ({ idToken, profile }: { idToken: string; profile: { name?: string; email?: string } }) => {
     setGoogleSubmitting(true);
+
+    // Pre-fill form fields with Google info
+    if (profile.name) setValue("name", profile.name);
+    if (profile.email) setValue("email", profile.email);
+
     try {
-      const res = await fetch(`/google-login`, {
+      const res = await fetch("/google-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id_token: idToken,
           extra_data: {
-            name: profile.name,
-            dob: profile.dob,
-            gender: profile.gender,
+            name: watch("name"),
+            dob: watch("dob"),
+            gender: watch("gender"),
           },
         }),
       });
 
       const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || json?.message || `Request failed: ${res.status}`);
 
-      if (!res.ok) {
-        const msg = json?.error || json?.message || `Request failed: ${res.status}`;
-        if (/password/i.test(msg)) {
-          alert("This email is registered with password login. Please login with email & password.");
-          navigate("/login");
-          return;
-        }
-        throw new Error(msg);
-      }
-
-      const token: string | undefined = json.token || json.access_token;
-      if (token) localStorage.setItem("jwt", token);
+      if (json.token) localStorage.setItem("jwt", json.token);
       if (json.user?.email) localStorage.setItem("user_email", json.user.email);
       if (json.user?.name) localStorage.setItem("user_name", json.user.name);
       if (json.user?.gender) localStorage.setItem("user_gender", json.user.gender);
-      try { sessionStorage.setItem("onboarding_mode", "new"); } catch {}
+
       navigate("/", { replace: true });
 
     } catch (e: any) {
@@ -91,31 +83,32 @@ export default function Signup() {
     } finally {
       setGoogleSubmitting(false);
     }
-  }
+  };
 
   // ----------- EMAIL/PASSWORD SIGNUP -----------
   const onSubmit = async (data: Form) => {
-    const body = {
-      email: data.email,
-      password: data.password,
-      confirm_password: data.confirm,
-      name: data.name,
-      gender: data.gender,
-      dob: data.dob,
-    };
     try {
-      const res = await fetch(`/signup`, {
+      const res = await fetch("/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          confirm_password: data.confirm,
+          name: data.name,
+          gender: data.gender,
+          dob: data.dob,
+        }),
       });
+
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || json?.message || `Request failed: ${res.status}`);
+
       if (json.token) localStorage.setItem("jwt", json.token);
       localStorage.setItem("user_email", data.email);
       localStorage.setItem("user_name", data.name);
       localStorage.setItem("user_gender", data.gender);
-      try { sessionStorage.setItem("onboarding_mode", "new"); } catch {}
+
       navigate("/", { replace: true });
     } catch (e: any) {
       alert(e.message || "Signup failed");
@@ -200,29 +193,11 @@ export default function Signup() {
                 </div>
 
                 {/* GOOGLE LOGIN */}
-                <GoogleButton
-                  mode="defer"
-                  onCredential={({ idToken, profile }) => {
-                    setPendingGoogle({ idToken, email: profile?.email });
-                    setProfileOpen(true); // Open form to collect extra info
-                  }}
-                />
+                <GoogleButton mode="defer" onCredential={handleGoogle} disabled={googleSubmitting} />
               </form>
             </CardContent>
           </Card>
         </div>
-
-        {/* PROFILE DIALOG FOR GOOGLE */}
-        <CompleteProfileDialog
-          open={profileOpen}
-          onOpenChange={setProfileOpen}
-          initialName={pendingGoogle?.email || ""}
-          submitting={googleSubmitting}
-          onSubmit={(data) => {
-            if (!pendingGoogle) return;
-            submitGoogleWithProfile(pendingGoogle.idToken, data);
-          }}
-        />
       </main>
     </div>
   );
