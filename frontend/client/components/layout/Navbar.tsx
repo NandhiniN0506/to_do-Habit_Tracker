@@ -82,7 +82,7 @@ export default function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => navigate("/settings")}>Settings</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { localStorage.removeItem("jwt"); localStorage.removeItem("user_email"); localStorage.removeItem("user_name"); window.location.assign("/login"); }}>Logout</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { localStorage.removeItem("jwt"); localStorage.removeItem("user_email"); localStorage.removeItem("user_name"); window.location.assign("/"); }}>Logout</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
