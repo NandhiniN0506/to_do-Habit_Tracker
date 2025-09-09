@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
-import { Button, Input, Label, Select, SelectItem } from "@/components/ui";
+import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui";
 
 interface FormData {
   email: string;
@@ -92,9 +92,18 @@ export default function Signup() {
           <h2>Signup</h2>
           {error && <p className="text-red-500">{error}</p>}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input {...register("email")} placeholder="Email" />
-            <Input type="password" {...register("password")} placeholder="Password" />
-            <Input type="password" {...register("confirm_password")} placeholder="Confirm Password" />
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" {...register("email")} placeholder="Email" />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" type="password" {...register("password")} placeholder="Password" />
+            </div>
+            <div>
+              <Label htmlFor="confirm_password">Confirm Password</Label>
+              <Input id="confirm_password" type="password" {...register("confirm_password")} placeholder="Confirm Password" />
+            </div>
             <Button type="submit">Signup</Button>
           </form>
 
@@ -109,13 +118,27 @@ export default function Signup() {
           <h2>Complete Google Signup</h2>
           {error && <p className="text-red-500">{error}</p>}
           <form onSubmit={handleSubmit(handleGoogleExtraSubmit)} className="space-y-4">
-            <Input {...register("name")} placeholder="Name" />
-            <Input type="date" {...register("dob")} placeholder="DOB" />
-            <Select {...register("gender")}>
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-              <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-            </Select>
+            <div>
+              <Label htmlFor="name">Name</Label>
+              <Input id="name" {...register("name")} placeholder="Name" />
+            </div>
+            <div>
+              <Label htmlFor="dob">Date of Birth</Label>
+              <Input id="dob" type="date" {...register("dob")} placeholder="DOB" />
+            </div>
+            <div>
+              <Label htmlFor="gender">Gender</Label>
+              <Select {...register("gender")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button type="submit">Complete Signup</Button>
           </form>
         </>
