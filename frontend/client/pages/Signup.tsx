@@ -21,7 +21,8 @@ export default function Signup() {
   // ------------------- Normal Signup -------------------
   const onSubmit = async (data: FormData) => {
     try {
-      const res = await fetch("/signup", {
+      const apiUrl = import.meta.env.VITE_FLASK_API_URL || "http://localhost:5000";
+      const res = await fetch(`${apiUrl}/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -39,22 +40,27 @@ export default function Signup() {
   const handleGoogleLogin = async (credentialResponse: { idToken: string }) => {
     const { idToken } = credentialResponse;
 
-    // Call backend first to check if extra info is needed
-    const res = await fetch("/google-login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id_token: idToken }),
-    });
-    const json = await res.json();
+    try {
+      // Call backend first to check if extra info is needed
+      const apiUrl = import.meta.env.VITE_FLASK_API_URL || "http://localhost:5000";
+      const res = await fetch(`${apiUrl}/google-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id_token: idToken }),
+      });
+      const json = await res.json();
 
-    if (res.status === 400 && json.error.includes("Additional info")) {
-      // First-time Google login → show extra form
-      setGoogleExtra({ idToken });
-    } else if (res.ok) {
-      localStorage.setItem("jwt", json.token);
-      navigate("/", { replace: true });
-    } else {
-      setError(json.error || "Google login failed");
+      if (res.status === 400 && json.error.includes("Additional info")) {
+        // First-time Google login → show extra form
+        setGoogleExtra({ idToken });
+      } else if (res.ok) {
+        localStorage.setItem("jwt", json.token);
+        navigate("/", { replace: true });
+      } else {
+        setError(json.error || "Google login failed");
+      }
+    } catch (err: any) {
+      setError("Network error: " + err.message);
     }
   };
 
@@ -63,7 +69,8 @@ export default function Signup() {
     if (!googleExtra) return;
 
     try {
-      const res = await fetch("/google-login", {
+      const apiUrl = import.meta.env.VITE_FLASK_API_URL || "http://localhost:5000";
+      const res = await fetch(`${apiUrl}/google-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -80,7 +87,7 @@ export default function Signup() {
       localStorage.setItem("jwt", json.token);
       navigate("/", { replace: true });
     } catch (err: any) {
-      setError(err.message);
+      setError("Network error: " + err.message);
     }
   };
 
