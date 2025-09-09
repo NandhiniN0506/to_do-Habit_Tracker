@@ -87,6 +87,12 @@ export default function Signup() {
   // ------------------- Render -------------------
   return (
     <div className="max-w-md mx-auto mt-10">
+      {/* Debug info */}
+      <div className="mb-4 p-2 bg-gray-100 rounded text-sm">
+        Debug: googleExtra is {googleExtra ? 'set' : 'null'}
+        {googleExtra && <button onClick={() => setGoogleExtra(null)} className="ml-2 text-blue-500 underline">Reset to normal form</button>}
+      </div>
+
       {!googleExtra ? (
         <>
           <h2>Signup</h2>
