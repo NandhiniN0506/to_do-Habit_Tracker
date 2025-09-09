@@ -1,204 +1,125 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
+import { Button, Input, Label, Select, SelectItem } from "@/components/ui";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+interface FormData {
+  email: string;
+  password: string;
+  confirm_password: string;
+  name?: string;
+  dob?: string;
+  gender?: string;
+}
 
-import GoogleButton from "@/components/auth/GoogleButton";
-import AuthHeader from "@/components/layout/AuthHeader";
-
-// ------------------ VALIDATION SCHEMA ------------------
-const schema = z.object({
-  name: z.string().min(1, "Name is required").regex(/^[A-Za-z ]+$/, "Only letters and spaces allowed"),
-  email: z.string().email("Enter a valid email"),
-  password: z
-    .string()
-    .min(8, "Min 8 characters")
-    .regex(/[A-Z]/, "At least 1 uppercase letter")
-    .regex(/[a-z]/, "At least 1 lowercase letter")
-    .regex(/[0-9]/, "At least 1 number")
-    .regex(/[^A-Za-z0-9]/, "At least 1 special character"),
-  confirm: z.string(),
-  gender: z.enum(["Male", "Female", "Prefer not to say"], { required_error: "Select a gender" }),
-  dob: z.string().refine((v) => {
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return false;
-    const today = new Date();
-    const age = today.getFullYear() - d.getFullYear() - ((today.getMonth() < d.getMonth() || (today.getMonth() === d.getMonth() && today.getDate() < d.getDate())) ? 1 : 0);
-    return age >= 10 && d <= today;
-  }, { message: "Must be at least 10 years old and not in the future" }),
-}).refine((vals) => vals.password === vals.confirm, { path: ["confirm"], message: "Passwords do not match" });
-
-type Form = z.infer<typeof schema>;
-
-// ------------------ COMPONENT ------------------
 export default function Signup() {
+  const { register, handleSubmit } = useForm<FormData>();
+  const [googleExtra, setGoogleExtra] = useState<{ idToken: string } | null>(null);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = useForm<Form>({
-    resolver: zodResolver(schema),
-  });
 
-  const [googleSubmitting, setGoogleSubmitting] = useState(false);
+  // ------------------- Normal Signup -------------------
+  const onSubmit = async (data: FormData) => {
+    try {
+      const res = await fetch("/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Signup failed");
+      alert("Signup successful!");
+      navigate("/login");
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
 
-  // ----------- GOOGLE SIGNUP -----------
-  const handleGoogle = async ({ idToken, profile }: { idToken: string; profile: { name?: string; email?: string } }) => {
-    setGoogleSubmitting(true);
+  // ------------------- Google Login -------------------
+  const handleGoogleLogin = async (credentialResponse: { idToken: string }) => {
+    const { idToken } = credentialResponse;
 
-    // Pre-fill form fields with Google info
-    if (profile.name) setValue("name", profile.name);
-    if (profile.email) setValue("email", profile.email);
+    // Call backend first to check if extra info is needed
+    const res = await fetch("/google-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id_token: idToken }),
+    });
+    const json = await res.json();
+
+    if (res.status === 400 && json.error.includes("Additional info")) {
+      // First-time Google login → show extra form
+      setGoogleExtra({ idToken });
+    } else if (res.ok) {
+      localStorage.setItem("jwt", json.token);
+      navigate("/", { replace: true });
+    } else {
+      setError(json.error || "Google login failed");
+    }
+  };
+
+  // ------------------- Submit Extra Google Info -------------------
+  const handleGoogleExtraSubmit = async (data: FormData) => {
+    if (!googleExtra) return;
 
     try {
       const res = await fetch("/google-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id_token: idToken,
+          id_token: googleExtra.idToken,
           extra_data: {
-            name: watch("name"),
-            dob: watch("dob"),
-            gender: watch("gender"),
+            name: data.name,
+            dob: data.dob,
+            gender: data.gender,
           },
         }),
       });
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || json?.message || `Request failed: ${res.status}`);
-
-      if (json.token) localStorage.setItem("jwt", json.token);
-      if (json.user?.email) localStorage.setItem("user_email", json.user.email);
-      if (json.user?.name) localStorage.setItem("user_name", json.user.name);
-      if (json.user?.gender) localStorage.setItem("user_gender", json.user.gender);
-
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Signup failed");
+      localStorage.setItem("jwt", json.token);
       navigate("/", { replace: true });
-
-    } catch (e: any) {
-      alert(e.message || "Google signup failed");
-    } finally {
-      setGoogleSubmitting(false);
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
-  // ----------- EMAIL/PASSWORD SIGNUP -----------
-  const onSubmit = async (data: Form) => {
-    try {
-      const res = await fetch("/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          confirm_password: data.confirm,
-          name: data.name,
-          gender: data.gender,
-          dob: data.dob,
-        }),
-      });
-
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || json?.message || `Request failed: ${res.status}`);
-
-      if (json.token) localStorage.setItem("jwt", json.token);
-      localStorage.setItem("user_email", data.email);
-      localStorage.setItem("user_name", data.name);
-      localStorage.setItem("user_gender", data.gender);
-
-      navigate("/", { replace: true });
-    } catch (e: any) {
-      alert(e.message || "Signup failed");
-    }
-  };
-
+  // ------------------- Render -------------------
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* BACKGROUND */}
-      <div className="absolute inset-0 -z-10 bg-[url('/bg-taskflow.svg')] bg-cover bg-center opacity-80" />
-      <div className="absolute -top-24 -right-24 -z-10 h-[400px] w-[400px] rounded-full bg-gradient-to-br from-cyan-300/40 to-indigo-300/40 blur-3xl" />
-      <div className="absolute -bottom-24 -left-24 -z-10 h-[420px] w-[420px] rounded-full bg-gradient-to-br from-pink-300/40 to-amber-300/40 blur-3xl" />
+    <div className="max-w-md mx-auto mt-10">
+      {!googleExtra ? (
+        <>
+          <h2>Signup</h2>
+          {error && <p className="text-red-500">{error}</p>}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Input {...register("email")} placeholder="Email" />
+            <Input type="password" {...register("password")} placeholder="Password" />
+            <Input type="password" {...register("confirm_password")} placeholder="Confirm Password" />
+            <Button type="submit">Signup</Button>
+          </form>
 
-      <main className="container py-8">
-        <div className="mx-auto max-w-md">
-          <AuthHeader />
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Create your account</CardTitle>
-              <CardDescription>Sign up to start tracking tasks and habits.</CardDescription>
-            </CardHeader>
-
-            <CardContent>
-              <form className="grid gap-4" onSubmit={handleSubmit(onSubmit)}>
-                {/* NAME */}
-                <div className="grid gap-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" placeholder="Alex Johnson" {...register("name")} />
-                  {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-                </div>
-
-                {/* EMAIL */}
-                <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@example.com" {...register("email")} />
-                  {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                </div>
-
-                {/* PASSWORD */}
-                <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" {...register("password")} />
-                  {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-                </div>
-
-                {/* CONFIRM PASSWORD */}
-                <div className="grid gap-2">
-                  <Label htmlFor="confirm">Confirm Password</Label>
-                  <Input id="confirm" type="password" {...register("confirm")} />
-                  {errors.confirm && <p className="text-sm text-destructive">{errors.confirm.message}</p>}
-                </div>
-
-                {/* GENDER */}
-                <div className="grid gap-2">
-                  <Label>Gender</Label>
-                  <Select value={watch("gender") as any} onValueChange={(v) => setValue("gender", v as any, { shouldValidate: true })}>
-                    <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.gender && <p className="text-sm text-destructive">{errors.gender.message}</p>}
-                </div>
-
-                {/* DOB */}
-                <div className="grid gap-2">
-                  <Label htmlFor="dob">Date of Birth</Label>
-                  <Input id="dob" type="date" {...register("dob")} />
-                  {errors.dob && <p className="text-sm text-destructive">{errors.dob.message}</p>}
-                </div>
-
-                {/* SUBMIT BUTTON */}
-                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Creating..." : "Sign up"}</Button>
-
-                {/* OR DIVIDER */}
-                <div className="relative my-2 text-center text-xs text-muted-foreground">
-                  <span className="bg-card px-2 relative z-10">or</span>
-                  <div className="absolute left-0 right-0 top-1/2 -z-0 h-px bg-border" />
-                </div>
-
-                {/* GOOGLE LOGIN */}
-                <GoogleButton mode="defer" onCredential={handleGoogle} disabled={googleSubmitting} />
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+          <hr className="my-4" />
+          <Button onClick={() => {
+            // Trigger Google login (replace with your Google login lib)
+            window.google.accounts.id.prompt((res: any) => handleGoogleLogin({ idToken: res.credential }));
+          }}>Signup with Google</Button>
+        </>
+      ) : (
+        <>
+          <h2>Complete Google Signup</h2>
+          {error && <p className="text-red-500">{error}</p>}
+          <form onSubmit={handleSubmit(handleGoogleExtraSubmit)} className="space-y-4">
+            <Input {...register("name")} placeholder="Name" />
+            <Input type="date" {...register("dob")} placeholder="DOB" />
+            <Select {...register("gender")}>
+              <SelectItem value="Male">Male</SelectItem>
+              <SelectItem value="Female">Female</SelectItem>
+              <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+            </Select>
+            <Button type="submit">Complete Signup</Button>
+          </form>
+        </>
+      )}
     </div>
   );
 }
