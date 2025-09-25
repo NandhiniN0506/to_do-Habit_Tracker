@@ -166,7 +166,8 @@ def google_login():
 
     except Exception as e:
         print("Google login failed:", str(e))
-        return jsonify({"error": "Invalid Google token"}), 400
+        return jsonify({"error": f"Invalid Google token: {str(e)}"}), 400
+
 
 
 # ---------------- TASK ROUTES ----------------
