@@ -117,9 +117,11 @@ def google_login():
         # Verify token with Google
         idinfo = id_token.verify_oauth2_token(token, grequests.Request(), GOOGLE_CLIENT_ID)
         email = idinfo["email"]
-
+        email = str(email).strip()  # sanitize and ensure string
+        
         users = supabase.table("users").select("*").eq("email", email).execute().data
         print(users)
+
         
         if not users:
             # Require extra info for first-time Google login
