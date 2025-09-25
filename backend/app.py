@@ -119,7 +119,8 @@ def google_login():
         email = idinfo["email"]
 
         users = supabase.table("users").select("*").eq("email", email).execute().data
-
+        print(users)
+        
         if not users:
             # Require extra info for first-time Google login
             if not extra_data:
